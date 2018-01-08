@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+
+<body>
+<div class="container">
+    <!-- header -->
+    <div class="header clearfix">
+        <div class="navbar-header">
+            <a href="/" class="navbar-brand">
+                XIONZHI
+            </a>
+        </div>
+        <label class="toggle-label visible-xs-inline-block" for="toggle-checkbox">MENU</label>
+        <input class="toggle-checkbox hidden" id="toggle-checkbox" type="checkbox">
+        <div class="hidden-xs">
+            <ul class="nav navbar-nav navbar-right nav-wrap">
+                <li role="presentation">
+                    <a href="/">Home</a>
+                </li>
+                <li role="presentation">
+                    <a href="/about">About</a>
+                </li>
+                <li role="presentation">
+                    <a href="/contact">Contact</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- body -->
+    <div class="form-sub">
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                <div class="bd-example form-body">
+                    <form action="/add" method="post">
+                        <div class="form-group">
+                            <label for="inputContent">your message:</label>
+                            <input type="text"  maxlength="64" class="form-control" name="content" id="inputContent"
+                                   placeholder="Enter content" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputName">your name:</label>
+                            {% if data.username %}
+                                <input type="text" maxlength="16" value="{{ data.username }}" class="form-control" name="name"
+                                       id="inputName" placeholder="Enter name" required>
+                            {% else %}
+                                <input type="text" maxlength="16" class="form-control" name="name" id="inputName"
+                                       placeholder="Enter name" required>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" id="inputSubmit" class="btn btn-default input-submit"
+                                   value="Ok! Release">
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+    </div>
+
+    <!-- marketing -->
+    <div class="form-sub">
+        <div class="row">
+            <div class="col-sm-1"></div>
+            <div class="col-sm-10">
+                {% for doc in docs %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <div class="panel-name"><p>{{ doc.name }}</p></div>
+                        </div>
+                        <div class="panel-body panel-content">
+                            <div class="panel-content"><p>{{ doc.content }}</p></div>
+                        </div>
+                        <div class="panel-footer panel-localtime">
+                            <div class="panel-localtime"><p>{{ doc.localtime }}</p></div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <div class="form-pager">
+                    <ul class="pager">
+                        {% if data.pageId == 1 or data.pageId == 0 %}
+                            <li class="previous disabled"><a>Newer&larr; </a></li>
+                        {% else %}
+                            <li class="previous"><a href="{{ url_for('index', page_id=(data.pageId - 1)) }}">Newer&larr; </a></li>
+                        {% endif %}
+
+                        {% if data.pageId >= data.pages or data.pageId == 0 %}
+                            <li class="next disabled"><a>Older &rarr; </a></li>
+                        {% else %}
+                            <li class="next"><a href="{{ url_for('index', page_id=(data.pageId + 1)) }}">Older &rarr; </a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+            </div>
+            <div class="col-sm-1"></div>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <p>© 2017 <a href="https://xionzhi.com">xionzhi</a> Inc.</p>
+    </footer>
+</div>
+</body>
+
+</html>
