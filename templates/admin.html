@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- header -->
+        <div class="header clearfix">
+            <div class="navbar-header">
+                <a href="/" class="navbar-brand">XIONZHI</a>
+            </div>
+            <label class="toggle-label visible-xs-inline-block" for="toggle-checkbox">MENU</label>
+            <input class="toggle-checkbox hidden" id="toggle-checkbox" type="checkbox">
+            <div class="hidden-xs">
+                <ul class="nav navbar-nav navbar-right nav-wrap">
+                    <li role="presentation">
+                        <a href="/">Home</a>
+                    </li>
+                    <li role="presentation">
+                        <a href="/about">About</a>
+                    </li>
+                    <li role="presentation">
+                        <a href="/contact">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- strat body -->
+        <div class="form-sub">
+            <div class="row">
+                <div class="col-sm-1"></div>
+                <div class="col-sm-10">
+                    <div class="bd-example form-body">
+                        <div class="form-group">
+                            <label for="inputContent">search string</label>
+                            <br>
+                            {% if search_str %}
+                            <input type="text" value="{{ search_str }}" class="form-control" id="inputContent" placeholder="Enter search string" required>
+                            {% else %}
+                            <input type="text" class="form-control" id="inputContent" placeholder="Enter search string" required>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <input type="button" id="search" class="btn btn-lg btn-info btn-block" value="Search Now">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-1"></div>
+            </div>
+        </div>
+
+        <div class="form-sub">
+            <div class="row">
+                <div class="col-sm-1"></div>
+                <div class="col-sm-10">
+                    <!-- for message -->
+                    <div class="bd-example form-body">
+                        <table class="table">
+                            <thead>
+                                <tr class="table-danger">
+                                    <th scope="col">Time</th>
+                                    <th scope="col">Name</th>
+                                    <th class="admin-msg-info" scope="col">Content</th>
+                                    <th class="admin-msg-info" scope="col">Ip</th>
+                                    <th scope="col">Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody id="msg-body">
+                                <!-- 内容填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- end for message -->
+                </div>
+                <div class="col-sm-1"></div>
+            </div>
+        </div>
+        <!-- end body -->
+
+        <!-- footer -->
+        <footer class="footer">
+            <p>© 2018
+                <a href="https://xionzhi.com">xionzhi</a> Inc.</p>
+        </footer>
+    </div>
+</body>
+<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</html>

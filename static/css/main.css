@@ -45,6 +45,7 @@ body {
 
 }
 
+/* */
 .toggle-label {
     display: inline-block;
     position: absolute;
@@ -57,5 +58,8 @@ body {
 @media (max-width: 768px) {
     .nav > li {
         margin-left: 20px;
+    }
+    .admin-msg-info {
+        display: none;
     }
   }

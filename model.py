@@ -1,8 +1,9 @@
 import re
 import time
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 
-from config import *
+from config import MONGO_URL, MONGO_DB
 
 
 class MyMongodb(object):
@@ -59,5 +60,41 @@ class MyMongodb(object):
             return False
         else:
             return True
+    
+    # 增加一位用户
+    def user_add(self, db):
+        posts = db['users']
+        docs = posts.find_one({"username": "xionzhi"})
+        if docs:
+            pass
+        else:
+            user_info_dict = {
+                'USERNAME': 'xionzhi',
+                'PASSWORD': 'xz123456',
+                'USERLOGINID': '12F4DDF90FAC22BA621698BC2060CC95DBCCA523'
+            }
+            posts.insert(user_info_dict)
+    
+    # 用户登录
+    def user_login(self, db, username, password):
+        posts = db['users']
+        docs = posts.find_one({"username": username, "password": password})
+        if docs:
+            return True
+        else:
+            return False
 
+    # 后台验证登陆
+    def find_user_admin(self, db, username):
+        posts = db['users']
+        docs = posts.find_one({"username": username})
+        if docs:
+            return docs
+        else:
+            return None
 
+    # 通过id 删除留言
+    def delete_msg(self, db, msg_id):
+        posts = db['message']
+        docs = posts.remove({"_id": ObjectId(msg_id)})
+        return str(docs['n'])

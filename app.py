@@ -1,13 +1,12 @@
 import os
 import time
-from flask import Flask, request, url_for, session, redirect, render_template, escape, abort, make_response
+import json
+from flask import Flask, request, url_for, session, redirect, render_template, make_response
 
 from model import MyMongodb
 
 # flask 全局对象
 app = Flask(__name__)
-# 加密随机字符串
-app.secret_key = os.urandom(16)
 
 # 数据库操作对象
 mongodb = MyMongodb()
@@ -19,29 +18,62 @@ db = mongodb.get_db()
 @app.route('/')
 @app.route('/page/<int:page_id>')
 def index(page_id=None):
+    mongodb.user_add(db)
     # mongodb.clear_coll_datas(db)  # 清空整个集合
     # 获取用户上一次提交用的 cookies 用户名
     username = request.cookies.get('username')
     pages = mongodb.get_all_count(db)
-    if page_id:
-    	# 显示指定页面
-        docs = mongodb.get_many_docs(db, page_id)
-        data = {
-            'username': username,
-            'pages': pages,
-            'pageId': page_id
-        }
-        return render_template('index.html', docs=docs, data=data)
-    else:
-    	# 访问首页 显示第一页
+    if not page_id:
         page_id = 1
-        docs = mongodb.get_many_docs(db, page_id)
-        data = {
-            'username': username,
-            'pages': pages,
-            'pageId': page_id
-        }
-        return render_template('index.html', docs=docs, data=data)
+    # 显示指定页面
+    docs = mongodb.get_many_docs(db, page_id)
+    data = {
+        'username': username,
+        'pages': pages,
+        'pageId': page_id
+    }
+    return render_template('index.html', docs=docs, data=data)
+
+
+# login 登陆后台
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username'].lstrip()
+        password = request.form['password'].lstrip()  # 获得登陆参数
+        if username == '' or password == '':
+            # 去除非法提交
+            error = '你提交的内容错误'
+            return render_template('error.html', error=error)
+        docs = mongodb.user_login(db, username, password)  # 查询参数是否正确
+        if docs:
+            resp = redirect(url_for('admin'))
+            USERLOGINID = '12F4DDF90FAC22BA621698BC2060CC95DBCCA523'
+            resp.set_cookie('USERLOGINID', USERLOGINID)  # 存储 cookie
+            resp.set_cookie('USERLOGINNAME', username)
+            return resp
+        else:
+            return redirect(url_for('login'))
+    else:
+        # get 页面
+        return render_template('login.html')
+
+
+# 网站后台
+@app.route('/xionzhi',methods=['POST', 'GET'])
+def admin():
+    USERLOGINID = request.cookies.get('USERLOGINID', default='', type=str)
+    USERLOGINNAME = request.cookies.get('USERLOGINNAME', default='', type=str)
+    username = request.cookies.get('username', default='', type=str)
+    search_str = request.cookies.get('search_str', default='', type=str)
+    login_string = USERLOGINID + ':' + USERLOGINNAME + ':' + username
+    # 查询数据库
+    doc_data = mongodb.find_user_admin(db, USERLOGINNAME)
+    if doc_data:
+        if login_string == doc_data['USERLOGINID']:
+            # 返回网站后台页
+            return render_template('admin.html', search_str=search_str)
+    return redirect(url_for('login'))
 
 
 # 提交一次 储存一次
@@ -52,17 +84,18 @@ def add():
         content = request.form['content'].lstrip()
         name = request.form['name'].lstrip()
         local_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
+        # 本地测试需要更改 ip 来源
         user_ip = request.remote_addr
         # user_ip = request.headers['X-Forwarded-For']  # nginx 反向代理后的真实ip
         user_header = request.headers['User-Agent']
         user_error = time.strftime("%Y%m%d", time.localtime())
-        # 设置提交上限
-        if not mongodb.user_insert_error(db, user_ip):
-            error = '你的请求达到限制'
-            return render_template('error.html', error=error)
         # 如果提交空 则返回错误页
         if content == '' or name == '':
             error = '你提交的内容错误'
+            return render_template('error.html', error=error)
+        # 设置提交上限
+        if not mongodb.user_insert_error(db, user_ip):
+            error = '你的请求达到限制'
             return render_template('error.html', error=error)
         data = {
             'name': name,  # 用户名
@@ -82,42 +115,85 @@ def add():
         return render_template('error.html', error=error)
 
 
-@app.route('/search/<search_str>')
-def search(search_str):
-	# 搜索查询 留言
-    username = request.cookies.get('username')
-    pages = mongodb.get_all_count(db)
-    page_id = 0
-    data = {
-        'username': username,
-        'pages': pages,
-        'pageId': page_id
-    }
-    search_str = str(search_str)
-    docs = mongodb.get_str_docs(db, search_str)
-    return render_template('index.html', docs=docs, data=data)
+# search
+@app.route('/search', methods=['GET', 'POST'])
+def search(search_str=None):
+    if request.method == 'POST':  # 后台采用post 查询
+        search_str = request.form['word'].lstrip()
+        if search_str:
+            docs = mongodb.get_str_docs(db, search_str)
+            data_list = []
+            for doc in docs:
+                data = {
+                    'name': doc['name'],
+                    'content': doc['content'],
+                    'localtime': doc['localtime'],
+                    'ip': doc['user_ip'],
+                    'headers': doc['user_headers'],
+                    'id': str(doc['_id'])
+                }
+                data_list.append(data)
+            resp = make_response(json.dumps(data_list))
+            resp.set_cookie('search_str', search_str)
+            return resp
+        else:
+            pass
+    else:  # 前台搜索使用 get
+        search_str = request.args.get('word', default=None, type=str)  # 搜索字符
+        if search_str:
+            # 搜索查询留言 json返回
+            docs = mongodb.get_str_docs(db, search_str)
+            data_list = []
+            for doc in docs:
+                data = {
+                    'name': doc['name'],
+                    'content': doc['content'],
+                    'localtime': doc['localtime']
+                }
+                data_list.append(data)
+            resp = make_response(json.dumps(data_list))
+            resp.set_cookie('search_str', search_str)
+            return resp
+        else:
+            searchstr = request.cookies.get('search_str')
+            return render_template('search.html', searchstr=searchstr)
 
 
 # about
 @app.route('/about')
 def about():
 	# 关于页面
-    return render_template('about.html')
+    username = request.cookies.get('username')
+    data = {
+        'username': username,
+    }
+    return render_template('about.html', data=data)
 
 
-# contact
-@app.route('/contact')
-def contact():
-	#  联系我们
-    return '<h1>待完善的搜索功能，请尝试使用以下url</h1><h2>msg.xionzhi.com/search/search_str</h2>'
+# delete message
+@app.route('/delete', methods=['GET', 'POST'])
+def delete():
+    if request.method == 'POST':
+        del_msg_id = request.form['delid'].lstrip()
+        if del_msg_id:
+            # 执行删除 留言
+            delete_wt = mongodb.delete_msg(db, del_msg_id)
+            return(delete_wt)
+    else:
+        return ''
 
 
 # 404 错误页
 @app.errorhandler(404)
 def page_not_found(error=None):
     # error = '404 not found'
-    return render_template('404.html', error=error), 404
+    username = request.cookies.get('username')
+    data = {
+        'username': username,
+    }
+    return render_template('404.html', error=error, data=data), 404
 
 
+# flask run
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8080)
