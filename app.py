@@ -8,25 +8,23 @@ from model import MyMongodb
 # flask 全局对象
 app = Flask(__name__)
 
-# 数据库操作对象
-mongodb = MyMongodb()
-# 数据库连接对象
-db = mongodb.get_db()
+# 数据库操作
+mongo_db = MyMongodb()
 
 
 # 首页
 @app.route('/')
 @app.route('/page/<int:page_id>')
 def index(page_id=None):
-    mongodb.user_add(db)
+    mongo_db.user_add()
     # mongodb.clear_coll_datas(db)  # 清空整个集合
     # 获取用户上一次提交用的 cookies 用户名
     username = request.cookies.get('username')
-    pages = mongodb.get_all_count(db)
+    pages = mongo_db.get_all_count()
     if not page_id:
         page_id = 1
     # 显示指定页面
-    docs = mongodb.get_many_docs(db, page_id)
+    docs = mongo_db.get_many_docs(page_id)
     data = {
         'username': username,
         'pages': pages,
@@ -45,7 +43,7 @@ def login():
             # 去除非法提交
             error = '你提交的内容错误'
             return render_template('error.html', error=error)
-        docs = mongodb.user_login(db, username, password)  # 查询参数是否正确
+        docs = mongo_db.user_login(username, password)  # 查询参数是否正确
         if docs:
             resp = redirect(url_for('admin'))
             USERLOGINID = '12F4DDF90FAC22BA621698BC2060CC95DBCCA523'
@@ -68,7 +66,7 @@ def admin():
     search_str = request.cookies.get('search_str', default='', type=str)
     login_string = USERLOGINID + ':' + USERLOGINNAME + ':' + username
     # 查询数据库
-    doc_data = mongodb.find_user_admin(db, USERLOGINNAME)
+    doc_data = mongo_db.find_user_admin(USERLOGINNAME)
     if doc_data:
         if login_string == doc_data['USERLOGINID']:
             # 返回网站后台页
@@ -94,7 +92,7 @@ def add():
             error = '你提交的内容错误'
             return render_template('error.html', error=error)
         # 设置提交上限
-        if not mongodb.user_insert_error(db, user_ip):
+        if not mongo_db.user_insert_error(user_ip):
             error = '你的请求达到限制'
             return render_template('error.html', error=error)
         data = {
@@ -106,7 +104,7 @@ def add():
             'user_error': user_error
         }
         # 储存用户输入
-        mongodb.insert_one_doc(db, data)
+        mongo_db.insert_one_doc(data)
         resp = make_response(redirect(url_for('index')))
         resp.set_cookie('username', name)  # 存储 cookie
         return resp
@@ -121,7 +119,7 @@ def search(search_str=None):
     if request.method == 'POST':  # 后台采用post 查询
         search_str = request.form['word'].lstrip()
         if search_str:
-            docs = mongodb.get_str_docs(db, search_str)
+            docs = mongo_db.get_str_docs(search_str)
             data_list = []
             for doc in docs:
                 data = {
@@ -142,7 +140,7 @@ def search(search_str=None):
         search_str = request.args.get('word', default=None, type=str)  # 搜索字符
         if search_str:
             # 搜索查询留言 json返回
-            docs = mongodb.get_str_docs(db, search_str)
+            docs = mongo_db.get_str_docs(search_str)
             data_list = []
             for doc in docs:
                 data = {
@@ -162,7 +160,6 @@ def search(search_str=None):
 # about
 @app.route('/about')
 def about():
-	# 关于页面
     username = request.cookies.get('username')
     data = {
         'username': username,
@@ -177,7 +174,7 @@ def delete():
         del_msg_id = request.form['delid'].lstrip()
         if del_msg_id:
             # 执行删除 留言
-            delete_wt = mongodb.delete_msg(db, del_msg_id)
+            delete_wt = mongo_db.delete_msg(del_msg_id)
             return(delete_wt)
     else:
         return ''
@@ -196,4 +193,4 @@ def page_not_found(error=None):
 
 # flask run
 if __name__ == '__main__':
-    app.run(port=8080)
+    app.run(port=8080, debug=True)
