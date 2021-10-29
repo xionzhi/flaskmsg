@@ -1,12 +1,18 @@
 import os
 import time
 import json
+
+from uuid import uuid4
+
+from flask_redis import FlaskRedis
 from flask import Flask, request, url_for, session, redirect, render_template, make_response
 
 from model import MyMongodb
 
 # flask 全局对象
 app = Flask(__name__)
+
+redis_store = FlaskRedis(app, decode_responses=True)
 
 # 数据库操作
 mongo_db = MyMongodb()
@@ -16,8 +22,6 @@ mongo_db = MyMongodb()
 @app.route('/')
 @app.route('/page/<int:page_id>')
 def index(page_id=None):
-    mongo_db.user_add()
-    # mongodb.clear_coll_datas(db)  # 清空整个集合
     # 获取用户上一次提交用的 cookies 用户名
     username = request.cookies.get('username')
     pages = mongo_db.get_all_count()
@@ -39,16 +43,22 @@ def login():
     if request.method == 'POST':
         username = request.form['username'].lstrip()
         password = request.form['password'].lstrip()  # 获得登陆参数
+
         if username == '' or password == '':
             # 去除非法提交
             error = '你提交的内容错误'
             return render_template('error.html', error=error)
+
         docs = mongo_db.user_login(username, password)  # 查询参数是否正确
+        print(docs)
+
         if docs:
             resp = redirect(url_for('admin'))
-            USERLOGINID = '12F4DDF90FAC22BA621698BC2060CC95DBCCA523'
-            resp.set_cookie('USERLOGINID', USERLOGINID)  # 存储 cookie
-            resp.set_cookie('USERLOGINNAME', username)
+
+            token = uuid4().hex
+            resp.set_cookie('token', token)  # 存储 cookie
+            resp.set_cookie('username', username)
+            redis_store.set(token, f'{username}msg', nx=True, ex=60 * 60 * 24)
             return resp
         else:
             return redirect(url_for('login'))
@@ -58,19 +68,24 @@ def login():
 
 
 # 网站后台
-@app.route('/xionzhi',methods=['POST', 'GET'])
+@app.route('/xionzhi', methods=['POST', 'GET'])
 def admin():
-    USERLOGINID = request.cookies.get('USERLOGINID', default='', type=str)
-    USERLOGINNAME = request.cookies.get('USERLOGINNAME', default='', type=str)
-    username = request.cookies.get('username', default='', type=str)
     search_str = request.cookies.get('search_str', default='', type=str)
-    login_string = USERLOGINID + ':' + USERLOGINNAME + ':' + username
-    # 查询数据库
-    doc_data = mongo_db.find_user_admin(USERLOGINNAME)
-    if doc_data:
-        if login_string == doc_data['USERLOGINID']:
-            # 返回网站后台页
-            return render_template('admin.html', search_str=search_str)
+
+    token = request.cookies.get('token', default='', type=str)
+    username = request.cookies.get('username', default='', type=str)
+
+    if username == 'xionzhi':
+        mongo_db.user_add()
+
+    token_cache = redis_store.get(token)
+    if token_cache is None:
+        resp = make_response(redirect(url_for('index')))
+        return resp
+
+    if f'{token_cache}' == f'{username}msg':
+        return render_template('admin.html', search_str=search_str)
+
     return redirect(url_for('login'))
 
 
@@ -81,12 +96,16 @@ def add():
         # 获取表单数据 去除两空格
         content = request.form['content'].lstrip()
         name = request.form['name'].lstrip()
-        local_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
+        local_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
         # 本地测试需要更改 ip 来源
-        user_ip = request.remote_addr
-        # user_ip = request.headers['X-Forwarded-For']  # nginx 反向代理后的真实ip
+        user_ip = request.headers.get('X-Forwarded-For')  # nginx 反向代理后的真实ip
+        if user_ip in ('127.0.0.1', '', None):
+            user_ip = request.remote_addr
+
         user_header = request.headers['User-Agent']
         user_error = time.strftime("%Y%m%d", time.localtime())
+
         # 如果提交空 则返回错误页
         if content == '' or name == '':
             error = '你提交的内容错误'
@@ -175,7 +194,7 @@ def delete():
         if del_msg_id:
             # 执行删除 留言
             delete_wt = mongo_db.delete_msg(del_msg_id)
-            return(delete_wt)
+            return f'{delete_wt}'
     else:
         return ''
 

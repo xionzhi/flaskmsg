@@ -66,9 +66,8 @@ class MyMongodb(object):
             pass
         else:
             user_info_dict = {
-                'USERNAME': 'xionzhi',
-                'PASSWORD': 'xz123456',
-                'USERLOGINID': '12F4DDF90FAC22BA621698BC2060CC95DBCCA523'
+                'username': 'xionzhi',
+                'password': 'xz123456',
             }
             posts.insert(user_info_dict)
     
