@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from config import MONGO_URL, MONGO_DB
 
 
-class MyMongodb(object):
+class MongoController(object):
     def __init__(self):
         self.client = MongoClient(MONGO_URL, connect=False)
         self.db = self.client[MONGO_DB]
@@ -32,7 +32,7 @@ class MyMongodb(object):
     def get_all_count(self):
         posts = self.db['message']
         count = posts.find().count()
-        return count/5
+        return count / 5
 
     # 清空一个表格 集合
     def clear_coll_datas(self):
@@ -52,12 +52,15 @@ class MyMongodb(object):
     def user_insert_error(self, ip):
         now_time = time.strftime("%Y%m%d", time.localtime())
         posts = self.db['message']
+        if ip == '127.0.0.1':
+            return True
+
         count = posts.find({'user_ip': ip, 'user_error': now_time}).count()
         if count >= 10:
             return False
         else:
             return True
-    
+
     # 增加一位用户
     def user_add(self):
         posts = self.db['users']
@@ -70,7 +73,7 @@ class MyMongodb(object):
                 'password': 'xz123456',
             }
             posts.insert(user_info_dict)
-    
+
     # 用户登录
     def user_login(self, username, password):
         posts = self.db['users']

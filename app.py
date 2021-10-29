@@ -1,13 +1,12 @@
-import os
 import time
 import json
-
+import time
 from uuid import uuid4
 
+from flask import Flask, request, url_for, redirect, render_template, make_response
 from flask_redis import FlaskRedis
-from flask import Flask, request, url_for, session, redirect, render_template, make_response
 
-from model import MyMongodb
+from model import MongoController
 
 # flask 全局对象
 app = Flask(__name__)
@@ -15,7 +14,7 @@ app = Flask(__name__)
 redis_store = FlaskRedis(app, decode_responses=True)
 
 # 数据库操作
-mongo_db = MyMongodb()
+mongo_db = MongoController()
 
 
 # 首页
